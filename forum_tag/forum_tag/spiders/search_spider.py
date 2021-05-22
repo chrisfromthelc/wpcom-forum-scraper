@@ -10,7 +10,7 @@ class TagSpiderSpider(scrapy.Spider):
 
     def parse(self, response):
         # follow links to topic pages
-        for href in response.css('a.bbp-topic-permalink::attr(href)'):
+        for href in response.css('a.jetpack-instant-search__search-result-title-link::attr(href)'):
             yield response.follow(href, self.parse_topic)
 
         #follow pagination links

@@ -5,32 +5,37 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
-import sys
-import MySQLdb
-import hashlib
-from scrapy.exceptions import DropItem
-from scrapy.http import Request
+import logging
+import pymongo
 
+class MongoPipeline(object):
 
-class MySQLStorePipeline(object):
-    def __init__(self):
-        global db
-        db = MySQLdb.connect(host="LOCALHOST", port=3306, user="USER", passwd="PASS", db="forum_topics")
-        global cursor
-        cursor = db.cursor()
+    collection_name = 'forum_topics'
 
-class ForumTagPipeline(object):
+    def __init__(self, mongo_uri, mongo_db):
+        self.mongo_uri = mongo_uri
+        self.mongo_db = mongo_db
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        ## pull in information from settings.py
+        return cls(
+            mongo_uri=crawler.settings.get('MONGO_URI'),
+            mongo_db=crawler.settings.get('MONGO_DATABASE')
+        )
+
+    def open_spider(self, spider):
+        ## initializing spider
+        ## opening db connection
+        self.client = pymongo.MongoClient(self.mongo_uri)
+        self.db = self.client[self.mongo_db]
+
+    def close_spider(self, spider):
+        ## clean up when spider is closed
+        self.client.close()
+
     def process_item(self, item, spider):
-        try:
-            cursor.execute("""INSERT INTO topics (topic_title, topic_url, topic_messages_text)
-                            VALUES (%s,%s,%s)""",
-                           (item['topic_title'].encode('utf-8'),
-                            item['topic_url'].encode('utf-8'),
-                            item['topic_messages_text'].encode('utf-8')))
-
-            db.commit()
-
-        except MySQLdb.Error, e:
-            print "Error %d: %s" % (e.args[0], e.args[1])
-
+        ## how to handle each post
+        self.db[self.collection_name].insert(dict(item))
+        logging.debug("Post added to MongoDB")
         return item
