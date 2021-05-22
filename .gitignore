@@ -102,3 +102,10 @@ ENV/
 
 # OSX
 .DS_Store
+
+# Test output
+.jl
+output.json
+
+#VS Code
+.code-workspace
